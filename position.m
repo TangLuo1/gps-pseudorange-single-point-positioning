@@ -1,9 +1,9 @@
 %%
 %gpsfileread
-fid1=fopen('igs19962.sp3');
-fid2=fopen('sdwa1000.18o');
-fid3=fopen('BRDC1000.18p');
-fid4=fopen('position_data.txt','w');
+fid1=fopen('igs19962.sp3');%精密星历文件
+fid2=fopen('sdwa1000.18o');%观测文件
+fid3=fopen('BRDC1000.18p');%广播星历文件，未使用
+fid4=fopen('position_data.txt','w');%定位结果输出
 line_num=0;
 tc=0;
 times=zeros(96,1);
@@ -17,7 +17,8 @@ while(1)
     end
     if line_txt(1)=='*'
         tc=tc+1;
-        %time only for 18.4.10
+        %时间仅限 18.4.10
+        %times数组是顺序tc对应精密星历时间
         times(tc)=str2double(line_txt(15:16))*3600+str2double(line_txt(18:19))*60+str2double(line_txt(21:31));
         for s=1:32
             line_txt=fgetl(fid1);
@@ -27,6 +28,8 @@ while(1)
                 flag1=1;
                 break;
             end
+            %sp3p数组是精密星历读取的内容
+            %调用使用（时间编号，卫星编号，:)=【卫星坐标XYZ 卫星钟差】
             sp3p(tc,s,:)=[str2double(line_txt(5:18))*1000
                 str2double(line_txt(19:32))*1000
                 str2double(line_txt(33:46))*1000
@@ -54,6 +57,7 @@ while(1)
         tc=tc+1;
         s=1;
         %time only for 18.4.10
+        timeo数组是顺序tc对应观测时间
         timeo(tc)=str2double(line_txt(14:15))*3600+str2double(line_txt(17:18))*60+str2double(line_txt(20:29));
     end
     if line_txt(1)=='G'
@@ -61,9 +65,12 @@ while(1)
         if (32>=gpsnum)&&(gpsnum>=1)
             osa=[str2double(line_txt(6:17)),str2double(line_txt(22:33))];
             if(osa(1)~=0&&osa(2)~=0)
-                %os(time,gps,[gps,wav1,wav2])
+                %ot（1:32）存储可见卫星在观测值数组os内的位置，调用ot(gps卫星编号）=位置
+                %ot（33）为可见卫星数
                 ot(tc,33)=s;
                 ot(tc,s)=gpsnum;
+                %os是观测元胞数组，os{观测时间编号}（gps编号）=【C1C C2W观测量】
+                %os大小不定，于可见卫星数有关
                 os{tc}=[os{tc};osa];
                 s=s+1;
             end
@@ -74,6 +81,7 @@ fclose(fid2);
 fclose(fid3);
 %%
 %interp
+%9阶拉格朗日插值
 k=1;
 int=cell(2878,1);
 for i=1:length(timeo)
@@ -110,6 +118,13 @@ for i=1:length(timeo)
 end
 %%
 %position
+%观测方程V=L-A*dX,P
+%观测向量L,系数矩阵A
+%当前历元坐标钟差int{Nnow}(gps)
+%未知数向量X
+%C1C频率f1，观测值os{Nnow}(1)
+%C2W频率f2，观测值os{Nnow}(2)
+%
 f1=1575420000;
 f2=1227600000;
 c=299792458;
