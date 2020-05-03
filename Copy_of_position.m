@@ -1,3 +1,10 @@
+
+/* This file is part of the gps-pseudorange-single-point-positioning project.
+
+ * Copyright (c) 2020 Tianyi
+ * This work is licensed under the GPL3.0 license, see the file LICENSE for details.
+
+ */
 %%
 %gpsfileread
 fid1=fopen('igs19962.sp3');
